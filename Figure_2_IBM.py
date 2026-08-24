@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from joblib import Parallel, delayed
 from tqdm import tqdm
-import h5py
 
 
 def simulate_feeding_phase(
