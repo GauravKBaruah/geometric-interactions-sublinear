@@ -1,4 +1,5 @@
-#Individual based model simulating feeding/foraging phase with non-comsumptive interference
+# Individual-based model simulating feeding/foraging phase with non-consumptive interference
+#Figure 02
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
