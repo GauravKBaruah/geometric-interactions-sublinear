@@ -4,7 +4,7 @@
 
 
 ## R and Python Scripts 
-1.`Figure_2_IBM.py` :  A Python script  to simulate and plot results of an individual-based model of a foraging phase in a bounded arena. The output is Figure 2 of the manuscript.
+1. `Figure_2_IBM.py` :  A Python script  to simulate and plot results of an individual-based model of a foraging phase in a bounded arena. The output is Figure 2 of the manuscript.
 
 2. `Figure_4_niche_overlap_param_sweep.R` : R script to reproduce figure 4 of the main-text.
 
