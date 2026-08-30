@@ -1,4 +1,4 @@
-# Individual-based model simulating feeding/foraging phase with non-consumptive interference
+#Individual-based model simulating feeding/foraging phase with non-consumptive interference
 #Figure 02
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,9 +8,9 @@ from tqdm import tqdm
 
 
 def simulate_feeding_phase(
-    N, xi, arena_radius=10.0, larva_radius=0.4, t_max=500,
-    feed_rate=0.1, move_speed=0.5, penalty_time=5,
-    m0=5, conversion_efficiency=0.2, total_resource=2500.0, r_int=1.0
+    N, xi, arena_radius=10.0, larva_radius=0.45, t_max=500,
+    feed_rate=0.1, move_speed=0.5, penalty_time=8,
+    m0=5, conversion_efficiency=0.2,conversion_efficiency_sd=0.01, total_resource=2500.0, r_int=1.0
 ):
     """
     Simulates consumer feeding in a bounded arena with social interaction rules.
@@ -23,7 +23,9 @@ def simulate_feeding_phase(
     energy = np.zeros(N)
     timeout = np.zeros(N, dtype=int)
     feeding_time = np.zeros(N, dtype=int)
-    speeds = np.abs(np.random.normal(move_speed, 0.3, N))
+    speeds = np.abs(np.random.normal(move_speed, 1, N))
+    individual_conversion_efficiency = np.random.normal(conversion_efficiency, conversion_efficiency_sd, N)
+    individual_conversion_efficiency = np.clip(individual_conversion_efficiency, 0, 1.0)
     
     for t in range(t_max):
         timeout[timeout > 0] -= 1
@@ -184,9 +186,37 @@ def simulate_and_plot_xi_range(xi_values):
     
     growth_rates_no_int = np.array([res[0] for res in results_no_int]).reshape(len(N_values), replicates)
     Q_values_no_int = np.array([res[1] for res in results_no_int]).reshape(len(N_values), replicates)
-    
-    mean_no_int = np.mean(growth_rates_no_int, axis=1)
-    std_no_int = np.std(growth_rates_no_int, axis=1)
+
+    # Raw observations and linear fit for the penalty_time = 0 panel.
+    # Jitter is used only when plotting; the model is fitted to the true N values.
+    raw_N_no_int = np.repeat(N_values, replicates)
+    raw_growth_no_int = growth_rates_no_int.reshape(-1)
+    linear_slope, linear_intercept = np.polyfit(
+        raw_N_no_int,
+        raw_growth_no_int,
+        deg=1
+    )
+    fitted_raw_growth = linear_intercept + linear_slope * raw_N_no_int
+    residual_sum_squares = np.sum(
+        (raw_growth_no_int - fitted_raw_growth) ** 2
+    )
+    total_sum_squares = np.sum(
+        (raw_growth_no_int - np.mean(raw_growth_no_int)) ** 2
+    )
+    linear_r_squared = (
+        1.0 - residual_sum_squares / total_sum_squares
+        if total_sum_squares > 0
+        else np.nan
+    )
+    linear_N = np.linspace(N_values.min(), N_values.max(), 200)
+    linear_growth = linear_intercept + linear_slope * linear_N
+
+    jitter_rng = np.random.default_rng(12345)
+    jittered_N_no_int = raw_N_no_int + jitter_rng.uniform(
+        -0.8,
+        0.8,
+        size=raw_N_no_int.size
+    )
 
 
     # Plotting 
@@ -207,10 +237,24 @@ def simulate_and_plot_xi_range(xi_values):
     axs[0, 0].set_ylabel('per-capita growth rate', fontsize=12)
     axs[0, 0].legend(loc='upper right')
 
-    # 2. Top-Right (0, 1): IBM No Interference (Penalty Time = 0)
-    axs[0, 1].errorbar(N_values, mean_no_int, yerr=std_no_int, fmt='o', 
-                       color='crimson', label='c = 0 (IBM)', 
-                       markersize=4, capsize=3, alpha=0.8)
+    # 2. Top-Right (0, 1): Raw IBM observations and fitted linear model
+    # for no persistent interference (penalty_time = 0).
+    axs[0, 1].scatter(
+        jittered_N_no_int,
+        raw_growth_no_int,
+        color='crimson',
+        s=18,
+        alpha=0.25,
+        edgecolors='none',
+        label='IBM replicates'
+    )
+    axs[0, 1].plot(
+        linear_N,
+        linear_growth,
+        color='black',
+        linewidth=2.2,
+        label=rf'Linear fit ($R^2={linear_r_squared:.3f}$)'
+    )
     axs[0, 1].set_xlabel('Population Density (N)', fontsize=12)
     axs[0, 1].set_ylabel('Realized per-capita growth rate', fontsize=12)
     axs[0, 1].legend(loc='upper right')
@@ -228,7 +272,7 @@ def simulate_and_plot_xi_range(xi_values):
     # 4. Bottom-Right (1, 1): Boxplot of Gamma estimates
     clean_gamma_estimates = [gamma[~np.isnan(gamma)] for gamma in all_gamma_estimates]
     
-    box = axs[1, 1].boxplot(clean_gamma_estimates, vert=True, patch_artist=True, labels=xi_values)
+    box = axs[1, 1].boxplot(clean_gamma_estimates, orientation='vertical', patch_artist=True, tick_labels=xi_values)
     
     for patch in box['boxes']:
         patch.set_facecolor('steelblue')
@@ -261,5 +305,5 @@ def simulate_and_plot_xi_range(xi_values):
 
 # Execute
 if __name__ == "__main__":
-    xi_values = [-1.0, -0.75, -0.5, 0.0, 0.5, 0.75, 1.0]
+    xi_values = [-1.0,-0.75,-0.5, 0.0,0.5 ,0.75,1.0]
     simulate_and_plot_xi_range(xi_values)
